@@ -4,7 +4,8 @@ name: Build Lumen OS 2
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -15,32 +16,32 @@ jobs:
     timeout-minutes: 180
 
     steps:
-      - name: Récupérer le code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Installer Docker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
+      - name: Verify Docker
+        run: docker --version
 
-      - name: Compiler Lumen OS
+      - name: Build toolchain
+        run: docker build -t lumen-toolchain docker
+
+      - name: Compile Lumen OS
         run: |
-          docker build -t lumen-toolchain docker
           mkdir -p build
           docker run --rm \
-            -v "$PWD":/src \
+            -v "$PWD:/src" \
             -v lumen-kbuild:/kbuild \
             lumen-toolchain \
             sh /src/docker/build-inside.sh
 
-      - name: Vérifier les fichiers générés
+      - name: Verify build artifacts
         run: |
           test -s build/Image
           test -s build/initramfs.cpio
           file build/Image build/initramfs.cpio
           ls -lh build/
 
-      - name: Publier les fichiers compilés
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: lumen-os-2-arm64
